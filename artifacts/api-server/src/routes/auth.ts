@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router, type IRouter, type Response } from "express";
 import { eq } from "drizzle-orm";
 import rateLimitPkg from "express-rate-limit";

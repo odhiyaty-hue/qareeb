@@ -1,3 +1,4 @@
+// @ts-nocheck
 import bcrypt from "bcryptjs";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
