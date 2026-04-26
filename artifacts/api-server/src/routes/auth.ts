@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Response } from "express";
 import { eq } from "drizzle-orm";
-import rateLimit from "express-rate-limit";
+import rateLimitPkg from "express-rate-limit";
 import { db, usersTable } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import {
@@ -13,6 +13,7 @@ import {
 } from "../lib/auth";
 
 const router: IRouter = Router();
+const rateLimit = rateLimitPkg as any;
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
