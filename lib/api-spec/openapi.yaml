@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Qareeb - charity platform connecting helpers and people in need
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: requests
+    description: Help requests
+  - name: help
+    description: Help actions / volunteers
+  - name: admin
+    description: Admin operations
+  - name: stats
+    description: Aggregated statistics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,1047 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPayload"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginPayload"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests:
+    get:
+      operationId: listRequests
+      tags: [requests]
+      summary: List approved help requests with optional filters
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, fulfilled, rejected]
+      responses:
+        "200":
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpRequest"
+    post:
+      operationId: createRequest
+      tags: [requests]
+      summary: Create a new help request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequestPayload"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/{id}:
+    get:
+      operationId: getRequest
+      tags: [requests]
+      summary: Get a single help request by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/mine:
+    get:
+      operationId: listMyRequests
+      tags: [requests]
+      summary: List help requests created by the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/{id}/help:
+    post:
+      operationId: offerHelp
+      tags: [help]
+      summary: Offer help for a specific request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferHelpPayload"
+      responses:
+        "201":
+          description: Help action recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpAction"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/{id}/helpers:
+    get:
+      operationId: listHelpers
+      tags: [help]
+      summary: List people who have offered help for a request (request owner or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of help actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpActionWithUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /my/help-actions:
+    get:
+      operationId: listMyHelpActions
+      tags: [help]
+      summary: List help actions made by the current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpActionWithRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/{id}/fulfill:
+    post:
+      operationId: markFulfilled
+      tags: [requests]
+      summary: Mark a request as fulfilled (request owner)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /requests/{id}/report:
+    post:
+      operationId: reportRequest
+      tags: [requests]
+      summary: Report a request as suspicious or inappropriate
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportPayload"
+      responses:
+        "201":
+          description: Report recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/overview:
+    get:
+      operationId: getOverviewStats
+      tags: [stats]
+      summary: Public stats — totals for the homepage
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OverviewStats"
+
+  /stats/categories:
+    get:
+      operationId: getCategoryStats
+      tags: [stats]
+      summary: Approved request counts grouped by category
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryCount"
+
+  /stats/cities:
+    get:
+      operationId: getCityStats
+      tags: [stats]
+      summary: Approved request counts grouped by city
+      responses:
+        "200":
+          description: Counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CityCount"
+
+  /admin/requests:
+    get:
+      operationId: adminListRequests
+      tags: [admin]
+      summary: List all requests (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, fulfilled, rejected]
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HelpRequestWithUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/requests/{id}/status:
+    patch:
+      operationId: adminUpdateRequestStatus
+      tags: [admin]
+      summary: Approve / reject / fulfill a request (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusPayload"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelpRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/requests/{id}:
+    delete:
+      operationId: adminDeleteRequest
+      tags: [admin]
+      summary: Delete a request (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List users (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserWithStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/users/{id}/trust:
+    patch:
+      operationId: adminUpdateUserTrust
+      tags: [admin]
+      summary: Update a user's trust status (admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTrustPayload"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/reports:
+    get:
+      operationId: adminListReports
+      tags: [admin]
+      summary: List reports (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportWithRequest"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Admin dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [user, admin]
+        trustStatus:
+          type: string
+          enum: [new, trusted, restricted]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, email, role, trustStatus, createdAt]
+
+    UserWithStats:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [user, admin]
+        trustStatus:
+          type: string
+          enum: [new, trusted, restricted]
+        createdAt:
+          type: string
+          format: date-time
+        requestsCount:
+          type: integer
+        helpActionsCount:
+          type: integer
+      required: [id, name, email, role, trustStatus, createdAt, requestsCount, helpActionsCount]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
+
+    RegisterPayload:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+          minLength: 6
+      required: [name, email, password]
+
+    LoginPayload:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    HelpRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        displayName:
+          type: ["string", "null"]
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [food, medicine, clothes, rent, other]
+        city:
+          type: string
+        urgency:
+          type: string
+          enum: [low, medium, high]
+        imageUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, fulfilled, rejected]
+        helpersCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, title, description, category, city, urgency, status, helpersCount, createdAt]
+
+    HelpRequestWithUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        displayName:
+          type: ["string", "null"]
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [food, medicine, clothes, rent, other]
+        city:
+          type: string
+        urgency:
+          type: string
+          enum: [low, medium, high]
+        imageUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, fulfilled, rejected]
+        helpersCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        userName:
+          type: string
+        userEmail:
+          type: string
+        userTrustStatus:
+          type: string
+          enum: [new, trusted, restricted]
+      required: [id, userId, title, description, category, city, urgency, status, helpersCount, createdAt, userName, userEmail, userTrustStatus]
+
+    CreateRequestPayload:
+      type: object
+      properties:
+        displayName:
+          type: string
+        title:
+          type: string
+          minLength: 3
+        description:
+          type: string
+          minLength: 10
+        category:
+          type: string
+          enum: [food, medicine, clothes, rent, other]
+        city:
+          type: string
+          minLength: 2
+        urgency:
+          type: string
+          enum: [low, medium, high]
+        imageUrl:
+          type: string
+      required: [title, description, category, city, urgency]
+
+    HelpAction:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        helperUserId:
+          type: integer
+        message:
+          type: ["string", "null"]
+        contactInfo:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [offered, accepted, completed]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, requestId, helperUserId, status, createdAt]
+
+    HelpActionWithUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        helperUserId:
+          type: integer
+        message:
+          type: ["string", "null"]
+        contactInfo:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [offered, accepted, completed]
+        createdAt:
+          type: string
+          format: date-time
+        helperName:
+          type: string
+        helperEmail:
+          type: string
+        helperPhone:
+          type: ["string", "null"]
+      required: [id, requestId, helperUserId, status, createdAt, helperName, helperEmail]
+
+    HelpActionWithRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        helperUserId:
+          type: integer
+        message:
+          type: ["string", "null"]
+        contactInfo:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [offered, accepted, completed]
+        createdAt:
+          type: string
+          format: date-time
+        request:
+          $ref: "#/components/schemas/HelpRequest"
+      required: [id, requestId, helperUserId, status, createdAt, request]
+
+    OfferHelpPayload:
+      type: object
+      properties:
+        message:
+          type: string
+        contactInfo:
+          type: string
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        reporterUserId:
+          type: integer
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, requestId, reporterUserId, reason, createdAt]
+
+    ReportWithRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        reporterUserId:
+          type: integer
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        requestTitle:
+          type: string
+        reporterName:
+          type: string
+      required: [id, requestId, reporterUserId, reason, createdAt, requestTitle, reporterName]
+
+    ReportPayload:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 5
+      required: [reason]
+
+    UpdateStatusPayload:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, fulfilled, rejected]
+      required: [status]
+
+    UpdateTrustPayload:
+      type: object
+      properties:
+        trustStatus:
+          type: string
+          enum: [new, trusted, restricted]
+      required: [trustStatus]
+
+    OverviewStats:
+      type: object
+      properties:
+        totalApprovedRequests:
+          type: integer
+        totalFulfilledRequests:
+          type: integer
+        totalHelpers:
+          type: integer
+        totalCities:
+          type: integer
+      required: [totalApprovedRequests, totalFulfilledRequests, totalHelpers, totalCities]
+
+    AdminStats:
+      type: object
+      properties:
+        pendingRequests:
+          type: integer
+        approvedRequests:
+          type: integer
+        fulfilledRequests:
+          type: integer
+        rejectedRequests:
+          type: integer
+        totalUsers:
+          type: integer
+        totalReports:
+          type: integer
+        totalHelpActions:
+          type: integer
+      required: [pendingRequests, approvedRequests, fulfilledRequests, rejectedRequests, totalUsers, totalReports, totalHelpActions]
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required: [category, count]
+
+    CityCount:
+      type: object
+      properties:
+        city:
+          type: string
+        count:
+          type: integer
+      required: [city, count]

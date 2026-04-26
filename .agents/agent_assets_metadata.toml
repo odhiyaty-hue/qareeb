@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "0hv1Qp0BJtsVOkc-R_b0F"
+uri = "file://artifacts/qareeb-web/src/assets/images/food.png"
+type = "image"
+title = "Soft illustration of bread and food"
+
+[[generated]]
+id = "v3BKC96uyeLdeVzpXH1Et"
+uri = "file://artifacts/qareeb-web/src/assets/images/medicine.png"
+type = "image"
+title = "Soft illustration of medicine and health"
+
+[[generated]]
+id = "PzTAqHknZqCmlsIyEzNHq"
+uri = "file://artifacts/qareeb-web/src/assets/images/clothes.png"
+type = "image"
+title = "Soft illustration of folded clothes"
+
+[[generated]]
+id = "anC1XnhSrRuEZ8Jt5e2Qr"
+uri = "file://artifacts/qareeb-web/src/assets/images/rent.png"
+type = "image"
+title = "Soft illustration of a doorway or house"
+
+[[generated]]
+id = "OQUvXoUvfcS5BGpkbwZA9"
+uri = "file://artifacts/qareeb-web/src/assets/images/other.png"
+type = "image"
+title = "Soft illustration of abstract helping hands"

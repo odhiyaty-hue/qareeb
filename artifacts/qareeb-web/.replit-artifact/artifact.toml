@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "قريب - Qareeb"
+version = "1.0.0"
+id = "artifacts/qareeb-web"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24366
+
+[services.development]
+run = "pnpm --filter @workspace/qareeb-web run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/qareeb-web", "run", "build" ]
+publicDir = "artifacts/qareeb-web/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24366"
+BASE_PATH = "/"
